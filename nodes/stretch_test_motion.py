@@ -27,15 +27,20 @@ class StretchTestMotion(hm.HelloNode):
         print("StretchTestMotion::wave()")
 
         # Create trajectory
+        center_pose = dict(self.home_pose)
+        center_pose.update({'joint_wrist_pitch': 0})
+        wave_amp = 0.2
         left_pose = dict(self.home_pose) # copy home pose
-        left_pose.update({'joint_wrist_pitch': 0.1, 'joint_wrist_yaw': 0.4}) # set wave left
+        left_pose.update({'joint_wrist_pitch': 0.1, 'joint_wrist_yaw': wave_amp, 'joint_wrist_roll': -wave_amp}) # set wave left
         right_pose = dict(left_pose)
-        right_pose.update({'joint_wrist_yaw': -0.4}) # set wave right
+        right_pose.update({'joint_wrist_yaw': -wave_amp, 'joint_wrist_roll': wave_amp}) # set wave right
 
         # Execute motion
+        self.move_to_pose(center_pose)
         for i in range(n_waves):
             self.move_to_pose(left_pose)
             self.move_to_pose(right_pose)
+        self.move_to_pose(center_pose)
         self.home()
         
     def home(self):
@@ -47,7 +52,7 @@ class StretchTestMotion(hm.HelloNode):
         rospy.Rate(self.rate)
 
         # Test motion
-        self.wave(3)
+        self.wave(2)
 
 if __name__ == '__main__':
     try:
