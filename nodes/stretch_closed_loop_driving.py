@@ -12,12 +12,14 @@ class State(Enum):
     TEST_DRIVE = 1
     RETURN_HOME = 2
     LOOP_MOVE = 3
+    MANUAL_MOVE = 4
 
 def print_idle_menu():
     print("========== Idle Menu ==========")
     print("1: Start Test Drive")
     print("2: Return Home")
     print("3: Loop Move")
+    print("4: Manually move base")
     print("q: Quit")
 
 
@@ -55,6 +57,8 @@ class StretchBaseNavigator(hm.HelloNode):
             return State.RETURN_HOME
         elif user_input == '3':
             return State.LOOP_MOVE
+        elif user_input == '4':
+            return State.MANUAL_MOVE
         elif user_input == 'q':
             rospy.signal_shutdown("User requested shutdown.")
             return State.IDLE
@@ -101,6 +105,26 @@ class StretchBaseNavigator(hm.HelloNode):
             self.control_move_to(x_goal, y_goal, a_goal)
 
         return State.IDLE
+
+    def state_manual_move(self) -> State:
+        rospy.loginfo("Manual move mode. Enter 'q' to quit.")
+        while not rospy.is_shutdown():
+            user_input = input("Enter target (x y theta) or 'q': ")
+            if user_input.lower() == 'q':
+                break
+            try:
+                inputs = user_input.split()
+                if len(inputs) != 3:
+                    raise ValueError("Expected three values: x y theta")
+                x_str, y_str, a_str = inputs
+                x_goal = float(x_str)
+                y_goal = float(y_str)
+                a_goal = float(a_str)
+                self.control_move_to(x_goal, y_goal, a_goal)
+            except ValueError:
+                print("Invalid input. Please enter x, y, theta or 'q' to quit.")
+        
+        return State.IDLE
     
     #####
     def control_move_to(
@@ -108,7 +132,7 @@ class StretchBaseNavigator(hm.HelloNode):
         x_goal: float,
         y_goal: float,
         a_goal: float,
-        rotate_eps: float = 0.02,
+        rotate_eps: float = 0.05,
         translate_eps: float = 0.02
     ):
         """
@@ -210,7 +234,7 @@ class StretchBaseNavigator(hm.HelloNode):
     def control_translate_by(
         self,
         distance_m: float,
-        eps: float = 0.02,
+        eps: float = 0.05,
         max_step: float = 0.05,   # max delta per iteration (meters)
         kp: float = 0.7,          # shrink step as error decreases
         timeout_s: float = 8.0,
@@ -305,6 +329,8 @@ class StretchBaseNavigator(hm.HelloNode):
                 self.state = self.state_return_home()
             elif self.state == State.LOOP_MOVE:
                 self.state = self.state_loop_move()
+            elif self.state == State.MANUAL_MOVE:
+                self.state = self.state_manual_move()
             else:
                 rospy.logerr("Unknown state: %s", str(self.state))
                 self.state = State.IDLE
